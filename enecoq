@@ -1,0 +1,193 @@
+#!/usr/bin/env python3
+###############################################################################
+# @(#) enecoQ Scraper
+#
+# Get the last electricity cost from enecoQ
+#
+#
+# MIT License
+#
+# Copyright (c) 2020 Shibata, Tats
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
+###############################################################################
+# {{{ const
+
+__version__ = "1.0"
+
+LOGIN_URL = "https://www.cyberhome.ne.jp/app/sslLogin.do"
+DOWNLOAD_DIR = "/tmp"
+CSV_FILE = DOWNLOAD_DIR + "/download.csv"
+
+# }}}
+# {{{ import
+
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+import codecs
+import csv
+import getopt
+import os
+import sys
+import time
+
+# }}}
+# {{{ usage()
+
+def usage():
+    print("""
+[USAGE] enecoq [-V] <EMAIL> <PASSWORD>
+
+OPTION:
+    -V, --version         Output version information and exit
+""", file=sys.stderr)
+
+# }}}
+# {{{ version()
+
+def version():
+    print("""enecoQ Scraper %s """ % (__version__))
+
+# }}}
+# {{{ Option
+
+class Option(object):
+    def __init__(self, opts, args):
+        self._set_opts(opts)
+        self._set_args(args)
+
+    def _set_opts(self, opts):
+        for o, a in opts:
+            if o in ("-V", "--version"):
+                version()
+                sys.exit(1)
+
+    def _set_args(self, args):
+        try:
+            self.email = args[0]
+        except IndexError:
+            print("[ERROR] EMAIL is required", file=sys.stderr)
+            usage()
+            sys.exit(1)
+
+        try:
+            self.password = args[1]
+        except IndexError:
+            print("[ERROR] PASSWORD is required", file=sys.stderr)
+            usage()
+            sys.exit(1)
+
+# }}}
+# {{{ valid_opt()
+
+def valid_opt(argv):
+    try:
+        opts, args = getopt.gnu_getopt(
+            argv[1:],
+            "p:V",
+            ["provider=", "version"]
+        )
+    except getopt.GetoptError:
+        print("[ERROR] Unknown option", file=sys.stderr)
+        usage()
+        sys.exit(1)
+
+    return Option(opts, args)
+
+# }}}
+# {{{ download_csv()
+
+def download_csv(email, password):
+    o = Options()
+    o.add_argument("--headless")
+    o.add_experimental_option(
+        "prefs",
+        {"download.default_directory": DOWNLOAD_DIR}
+    )
+
+    try:
+        driver = webdriver.Chrome(options=o)
+
+        # Login
+        driver.get(LOGIN_URL)
+        driver.find_element_by_id("user_id").send_keys(email)
+        driver.find_element_by_id("password").send_keys(password)
+        driver.find_element_by_class_name("login button").click()
+        driver.implicitly_wait(10)
+
+        # Switch to iframe
+        driver.switch_to.frame(
+            driver.find_element_by_css_selector("iframe[name='mini_ses']")
+        )
+        driver.implicitly_wait(10)
+
+        # Click "詳細を見る"
+        driver.find_element_by_class_name("btn_mini_details").click()
+        driver.implicitly_wait(10)
+
+        # Switch to enecoQ page
+        driver.switch_to.window(driver.window_handles[1])
+        driver.implicitly_wait(10)
+
+        # Click "使用料金"
+        driver.find_element_by_css_selector(".charge a").click()
+        driver.implicitly_wait(10)
+
+        # Click "表示内容をCSVでダウンロード"
+        driver.find_element_by_class_name("csv").click()
+        time.sleep(5)
+    finally:
+        driver.quit()
+
+# }}}
+# {{{ get_lastvalues()
+
+def get_lastvalues():
+    out = []
+
+    with codecs.open(CSV_FILE, encoding="shift_jis") as f:
+        for row in csv.reader(f):
+            if row[0] == "30分ごと" and row[2] != "":
+                out.clear()
+                out.append(row[2])
+                out.append(row[3])
+                out.append(row[4])
+
+    return out
+
+# }}}
+# {{{ main()
+
+def main():
+    opt = valid_opt(sys.argv)
+
+    try:
+        download_csv(opt.email, opt.password)
+
+        a = get_lastvalues()
+
+        if len(a) > 0:
+            print(a[0] + "," + a[1] + "," + a[2])
+    finally:
+        if os.path.exists(CSV_FILE):
+            os.remove(CSV_FILE)
+
+if __name__ == "__main__":
+    main()
