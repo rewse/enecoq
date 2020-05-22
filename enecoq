@@ -33,8 +33,6 @@
 __version__ = "2.0"
 
 LOGIN_URL = "https://www.cyberhome.ne.jp/app/sslLogin.do"
-DOWNLOAD_DIR = "/tmp"
-CSV_FILE = DOWNLOAD_DIR + "/download.csv"
 
 # }}}
 # {{{ import
