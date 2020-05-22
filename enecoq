@@ -184,7 +184,7 @@ def get_lastvalues(html):
     high = None
     for v in rset:
         if v:
-            if  i % 5 == 0:
+            if i % 5 == 0:
                 hour = v[:v.find(":")]
 
                 if len(hour) == 1:
@@ -204,7 +204,10 @@ def get_lastvalues(html):
 
     out.sort(key = lambda x: x["hour"])
 
-    return out[-1]
+    if len(out) > 0:
+        return out[-1]
+    else:
+        None
 
 # }}}
 # {{{ main()
@@ -220,7 +223,11 @@ def main():
 
     l = get_lastvalues(html)
 
-    print(l["low"] + "," + l["mid"] + "," + l["high"])
+    if l:
+        print(l["low"] + "," + l["mid"] + "," + l["high"])
+    else:
+        print("-,-,-")
+        exit(0)
 
 if __name__ == "__main__":
     main()
