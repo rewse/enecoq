@@ -96,8 +96,8 @@ def valid_opt(argv):
     try:
         opts, args = getopt.gnu_getopt(
             argv[1:],
-            "p:V",
-            ["provider=", "version"]
+            "V",
+            ["version"]
         )
     except getopt.GetoptError:
         print("[ERROR] Unknown option", file=sys.stderr)
