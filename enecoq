@@ -30,7 +30,7 @@
 ###############################################################################
 # {{{ const
 
-__version__ = "1.0"
+__version__ = "2.0"
 
 LOGIN_URL = "https://www.cyberhome.ne.jp/app/sslLogin.do"
 DOWNLOAD_DIR = "/tmp"
@@ -39,6 +39,7 @@ CSV_FILE = DOWNLOAD_DIR + "/download.csv"
 # }}}
 # {{{ import
 
+from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 import codecs
@@ -114,7 +115,7 @@ def valid_opt(argv):
 # }}}
 # {{{ download_csv()
 
-def download_csv(email, password):
+def get_html(email, password):
     o = Options()
     o.add_argument("--headless")
     o.add_experimental_option(
@@ -150,27 +151,70 @@ def download_csv(email, password):
         driver.find_element_by_css_selector(".charge a").click()
         driver.implicitly_wait(10)
 
-        # Click "表示内容をCSVでダウンロード"
-        driver.find_element_by_class_name("csv").click()
-        time.sleep(5)
+        return driver.page_source
     finally:
         driver.quit()
 
 # }}}
+# {{{ is_insufficient_values()
+
+def is_insufficient_values(html):
+    soup = BeautifulSoup(html, "html.parser")
+    tags = soup.select("#PlagClose1 td:not(.space)")
+
+    i = 0
+    for tag in tags:
+        if tag.get_text().replace(" ", "").replace("円", "").strip() != "":
+            i = i + 1
+
+    # If i is odd, the costs have only been measured for half hour.
+    if i % 2 == 1:
+        return True
+    else:
+        return False
+
+# }}}
 # {{{ get_lastvalues()
 
-def get_lastvalues():
+def get_lastvalues(html):
+    soup = BeautifulSoup(html, "html.parser")
+    tags = soup.select("#PlagClose2 th, #PlagClose2 td:not(.space)")
+
+    rset = []
+    for tag in tags:
+        rset.append(
+            tag.get_text().replace(" ", "").replace("円", "").strip()
+        )
+
     out = []
+    i = 0
+    hour = None
+    low = None
+    mid = None
+    high = None
+    for v in rset:
+        if v:
+            if  i % 5 == 0:
+                hour = v[:v.find(":")]
 
-    with codecs.open(CSV_FILE, encoding="shift_jis") as f:
-        for row in csv.reader(f):
-            if row[0] == "30分ごと" and row[2] != "":
-                out.clear()
-                out.append(row[2])
-                out.append(row[3])
-                out.append(row[4])
+                if len(hour) == 1:
+                    hour = "0" + hour
+            elif i % 5 == 1:
+                low = v
+            elif i % 5 == 2:
+                mid = v
+            elif i % 5 == 3:
+                high = v
+            else:
+                if hour and low and mid and high:
+                    row = {"hour": hour, "low": low, "mid": mid, "high": high}
+                    out.append(row)
 
-    return out
+        i = i + 1
+
+    out.sort(key = lambda x: x["hour"])
+
+    return out[-1]
 
 # }}}
 # {{{ main()
@@ -178,16 +222,15 @@ def get_lastvalues():
 def main():
     opt = valid_opt(sys.argv)
 
-    try:
-        download_csv(opt.email, opt.password)
+    html = get_html(opt.email, opt.password)
 
-        a = get_lastvalues()
+    if is_insufficient_values(html):
+        print("-,-,-")
+        exit(0)
 
-        if len(a) > 0:
-            print(a[0] + "," + a[1] + "," + a[2])
-    finally:
-        if os.path.exists(CSV_FILE):
-            os.remove(CSV_FILE)
+    l = get_lastvalues(html)
+
+    print(l["low"] + "," + l["mid"] + "," + l["high"])
 
 if __name__ == "__main__":
     main()
