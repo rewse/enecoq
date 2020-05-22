@@ -40,12 +40,8 @@ LOGIN_URL = "https://www.cyberhome.ne.jp/app/sslLogin.do"
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
-import codecs
-import csv
 import getopt
-import os
 import sys
-import time
 
 # }}}
 # {{{ usage()
@@ -116,10 +112,6 @@ def valid_opt(argv):
 def get_html(email, password):
     o = Options()
     o.add_argument("--headless")
-    o.add_experimental_option(
-        "prefs",
-        {"download.default_directory": DOWNLOAD_DIR}
-    )
 
     try:
         driver = webdriver.Chrome(options=o)
