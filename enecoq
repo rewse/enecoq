@@ -107,7 +107,7 @@ def valid_opt(argv):
     return Option(opts, args)
 
 # }}}
-# {{{ download_csv()
+# {{{ get_html()
 
 def get_html(email, password):
     o = Options()
@@ -146,9 +146,9 @@ def get_html(email, password):
         driver.quit()
 
 # }}}
-# {{{ is_insufficient_values()
+# {{{ is_sufficient_values()
 
-def is_insufficient_values(html):
+def is_sufficient_values(html):
     soup = BeautifulSoup(html, "html.parser")
     tags = soup.select("#PlagClose1 td:not(.space)")
 
@@ -158,7 +158,7 @@ def is_insufficient_values(html):
             i = i + 1
 
     # If i is odd, the costs have only been measured for half hour.
-    if i % 2 == 1:
+    if i % 2 == 0:
         return True
     else:
         return False
@@ -217,17 +217,17 @@ def main():
 
     html = get_html(opt.email, opt.password)
 
-    if is_insufficient_values(html):
-        print("-,-,-")
-        exit(0)
+    if is_sufficient_values(html):
+        l = get_lastvalues(html)
 
-    l = get_lastvalues(html)
-
-    if l:
-        print(l["low"] + "," + l["mid"] + "," + l["high"])
+        if l:
+            print(l["low"] + "," + l["mid"] + "," + l["high"])
+        else:
+            print("None,None,None")
     else:
-        print("-,-,-")
-        exit(0)
+        print("Insuff,Insuff,Insuff")
+
+    exit(0)
 
 if __name__ == "__main__":
     main()
