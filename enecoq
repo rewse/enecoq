@@ -30,7 +30,7 @@
 ###############################################################################
 # {{{ const
 
-__version__ = "2.0"
+__version__ = "2.1"
 
 LOGIN_URL = "https://www.cyberhome.ne.jp/app/sslLogin.do"
 
@@ -40,6 +40,7 @@ LOGIN_URL = "https://www.cyberhome.ne.jp/app/sslLogin.do"
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
+import datetime
 import getopt
 import sys
 
@@ -48,9 +49,10 @@ import sys
 
 def usage():
     print("""
-[USAGE] enecoq [-V] <EMAIL> <PASSWORD>
+[USAGE] enecoq [-lV] <EMAIL> <PASSWORD>
 
 OPTION:
+    -l, --list            Return all results
     -V, --version         Output version information and exit
 """, file=sys.stderr)
 
@@ -69,7 +71,11 @@ class Option(object):
         self._set_args(args)
 
     def _set_opts(self, opts):
+        self.long = False
+
         for o, a in opts:
+            if o in ("-l", "--long"):
+                self.long = True
             if o in ("-V", "--version"):
                 version()
                 sys.exit(1)
@@ -96,8 +102,8 @@ def valid_opt(argv):
     try:
         opts, args = getopt.gnu_getopt(
             argv[1:],
-            "V",
-            ["version"]
+            "lV",
+            ["long", "version"]
         )
     except getopt.GetoptError:
         print("[ERROR] Unknown option", file=sys.stderr)
@@ -107,9 +113,9 @@ def valid_opt(argv):
     return Option(opts, args)
 
 # }}}
-# {{{ get_html()
+# {{{ obtain_html()
 
-def get_html(email, password):
+def obtain_html(email, password):
     o = Options()
     o.add_argument("--headless")
 
@@ -164,9 +170,9 @@ def is_sufficient_values(html):
         return False
 
 # }}}
-# {{{ get_lastvalues()
+# {{{ obtain_costs()
 
-def get_lastvalues(html):
+def obtain_costs(html):
     soup = BeautifulSoup(html, "html.parser")
     tags = soup.select("#PlagClose2 th, #PlagClose2 td:not(.space)")
 
@@ -204,10 +210,7 @@ def get_lastvalues(html):
 
     out.sort(key = lambda x: x["hour"])
 
-    if len(out) > 0:
-        return out[-1]
-    else:
-        None
+    return out
 
 # }}}
 # {{{ main()
@@ -215,13 +218,29 @@ def get_lastvalues(html):
 def main():
     opt = valid_opt(sys.argv)
 
-    html = get_html(opt.email, opt.password)
+    html = obtain_html(opt.email, opt.password)
 
     if is_sufficient_values(html):
-        l = get_lastvalues(html)
+        costs = obtain_costs(html)
 
-        if l:
-            print(l["low"] + "," + l["mid"] + "," + l["high"])
+        if costs:
+            if opt.long:
+                for d in costs:
+                    print(
+                        str(datetime.datetime.fromisoformat(
+                            datetime.date.today().isoformat() +
+                            "T" + d["hour"] + ":59:59+09:00"
+                        ).timestamp() + 1)[:-2] + "," +
+                        str(d["low"]) + "," +
+                        str(d["mid"]) + "," +
+                        str(d["high"])
+                    )
+            else:
+                print(
+                    costs[-1]["low"] + "," +
+                    costs[-1]["mid"] + "," +
+                    costs[-1]["high"]
+                )
         else:
             print("None,None,None")
     else:
