@@ -1,4 +1,5 @@
-[USAGE] enecoq [-V] <EMAIL> <PASSWORD>
+[USAGE] enecoq [-lV] <EMAIL> <PASSWORD>
 
 OPTION:
+    -l, --list            Return all results
     -V, --version         Output version information and exit
