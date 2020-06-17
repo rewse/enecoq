@@ -60,7 +60,7 @@ OPTION:
 # {{{ version()
 
 def version():
-    print("""enecoQ Scraper %s """ % (__version__))
+    print("enecoQ Scraper %s " % (__version__))
 
 # }}}
 # {{{ Option
@@ -226,21 +226,17 @@ def main():
         if costs:
             if opt.long:
                 for d in costs:
-                    print(
-                        str(datetime.datetime.fromisoformat(
-                            datetime.date.today().isoformat() +
-                            "T" + d["hour"] + ":59:59+09:00"
-                        ).timestamp() + 1)[:-2] + "," +
-                        str(d["low"]) + "," +
-                        str(d["mid"]) + "," +
-                        str(d["high"])
-                    )
+                    print("%d,%s,%s,%s" % (
+                        int(datetime.datetime.fromisoformat("%sT%s:59:59+09:00" % (
+                            datetime.date.today().isoformat(),
+                            d["hour"]
+                        )).timestamp() + 1),
+                        d["low"],
+                        d["mid"],
+                        d["high"]
+                    ))
             else:
-                print(
-                    costs[-1]["low"] + "," +
-                    costs[-1]["mid"] + "," +
-                    costs[-1]["high"]
-                )
+                print("%s,%s,%s" % (costs[-1]["low"], costs[-1]["mid"], costs[-1]["high"]))
         else:
             print("None,None,None")
     else:
