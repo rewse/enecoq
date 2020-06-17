@@ -30,7 +30,7 @@
 ###############################################################################
 # {{{ const
 
-__version__ = "2.1"
+__version__ = "2.2"
 
 LOGIN_URL = "https://www.cyberhome.ne.jp/app/sslLogin.do"
 
@@ -81,19 +81,15 @@ class Option(object):
                 sys.exit(1)
 
     def _set_args(self, args):
-        try:
+        if len(args) > 0:
             self.email = args[0]
-        except IndexError:
-            print("[ERROR] EMAIL is required", file=sys.stderr)
-            usage()
-            sys.exit(1)
+        else:
+            self.email = input("Email: ")
 
-        try:
+        if len(args) > 1:
             self.password = args[1]
-        except IndexError:
-            print("[ERROR] PASSWORD is required", file=sys.stderr)
-            usage()
-            sys.exit(1)
+        else:
+            self.password = input("Password: ")
 
 # }}}
 # {{{ valid_opt()
