@@ -103,7 +103,7 @@ def valid_opt(argv):
         opts, args = getopt.gnu_getopt(
             argv[1:],
             "wlV",
-            ["long", "version"]
+            ["kwh", "long", "version"]
         )
     except getopt.GetoptError:
         print("[ERROR] Unknown option", file=sys.stderr)
